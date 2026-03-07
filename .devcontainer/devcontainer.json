@@ -1,8 +1,5 @@
 {
-  "name": "ELT Pipeline",
+  "name": "ELT Pipeline Environment",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
-  "features": {
-    "ghcr.io/devcontainers/features/postgres:1": {}
-  },
   "postCreateCommand": "pip install -r requirements.txt"
 }
