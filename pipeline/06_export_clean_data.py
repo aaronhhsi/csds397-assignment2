@@ -14,11 +14,12 @@ DB_PORT = "5432"
 def main():
     engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
+    # Export each staging table individually
     tables = {
-        "departments": "SELECT * FROM departments ORDER BY department_id;",
-        "employees": "SELECT * FROM employees ORDER BY employee_id;",
-        "sales_metrics": "SELECT * FROM sales_metrics ORDER BY employee_id;",
-        "support_metrics": "SELECT * FROM support_metrics ORDER BY employee_id;",
+        "departments": "SELECT * FROM staging.departments ORDER BY department_id;",
+        "employees": "SELECT * FROM staging.employees ORDER BY employee_id;",
+        "sales_metrics": "SELECT * FROM staging.sales_metrics ORDER BY employee_id;",
+        "support_metrics": "SELECT * FROM staging.support_metrics ORDER BY employee_id;",
     }
 
     with engine.connect() as conn:
@@ -28,6 +29,7 @@ def main():
             df.to_csv(filepath, index=False)
             print(f"Exported {len(df)} rows to {filepath}")
 
+        # Also export a single joined view for convenience
         joined_query = """
             SELECT
                 e.employee_id,
@@ -41,10 +43,10 @@ def main():
                 e.performance_rating,
                 sm.total_sales,
                 su.support_rating
-            FROM employees e
-            JOIN departments d ON e.department_id = d.department_id
-            LEFT JOIN sales_metrics sm ON e.employee_id = sm.employee_id
-            LEFT JOIN support_metrics su ON e.employee_id = su.employee_id
+            FROM staging.employees e
+            JOIN staging.departments d ON e.department_id = d.department_id
+            LEFT JOIN staging.sales_metrics sm ON e.employee_id = sm.employee_id
+            LEFT JOIN staging.support_metrics su ON e.employee_id = su.employee_id
             ORDER BY e.employee_id;
         """
         df_joined = pd.read_sql(joined_query, conn)

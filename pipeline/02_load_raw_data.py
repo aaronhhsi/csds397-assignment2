@@ -13,6 +13,7 @@ DB_HOST = "localhost"
 DB_PORT = "5432"
 
 def main():
+    # Load everything as string — no type coercion at this stage
     df = pd.read_csv(RAW_FILE, dtype=str)
 
     conn = psycopg2.connect(
@@ -24,11 +25,11 @@ def main():
     )
     cur = conn.cursor()
 
-    cur.execute("TRUNCATE TABLE raw_data RESTART IDENTITY;")
+    cur.execute("TRUNCATE TABLE sources.raw_data RESTART IDENTITY;")
 
     records = [tuple(row) for row in df.itertuples(index=False)]
     execute_values(cur, """
-        INSERT INTO raw_data (
+        INSERT INTO sources.raw_data (
             employee_id, name, age, department, date_of_joining,
             years_of_experience, country, salary, performance_rating,
             total_sales, support_rating
@@ -38,7 +39,7 @@ def main():
     conn.commit()
     cur.close()
     conn.close()
-    print(f"Loaded {len(records)} rows into raw_data.")
+    print(f"Loaded {len(records)} rows into sources.raw_data.")
 
 if __name__ == "__main__":
     main()

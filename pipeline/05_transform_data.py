@@ -29,24 +29,30 @@ def main():
     )
     cur = conn.cursor()
 
-    df = pd.read_sql("SELECT * FROM raw_data;", conn)
-    print(f"Loaded {len(df)} rows from raw_data.")
+    df = pd.read_sql("SELECT * FROM sources.raw_data;", conn)
+    print(f"Loaded {len(df)} rows from sources.raw_data.")
 
+    # --- Step 1: Remove fully duplicate rows ---
     df = df.drop_duplicates()
     print(f"After removing duplicate rows: {len(df)}")
 
+    # --- Step 2: Remove duplicate employee IDs (keep first occurrence) ---
     df = df.drop_duplicates(subset=["employee_id"])
     print(f"After removing duplicate employee IDs: {len(df)}")
 
+    # --- Step 3: Drop rows with invalid departments ---
     invalid_dept = ~df["department"].isin(VALID_DEPARTMENTS)
     print(f"Rows with invalid department dropped: {invalid_dept.sum()}")
     df = df[~invalid_dept]
 
+    # --- Step 4: Drop rows missing critical fields ---
     df = df.dropna(subset=["employee_id", "name", "department"])
     print(f"After dropping rows missing critical fields: {len(df)}")
 
+    # --- Step 5: Normalize date formats ---
     df["date_of_joining"] = df["date_of_joining"].apply(normalize_date)
 
+    # --- Step 6: Cast numeric columns, coerce invalid values to NaN ---
     df["employee_id"] = pd.to_numeric(df["employee_id"], errors="coerce")
     df["age"] = pd.to_numeric(df["age"], errors="coerce")
     df["years_of_experience"] = pd.to_numeric(df["years_of_experience"], errors="coerce")
@@ -55,26 +61,31 @@ def main():
     df["total_sales"] = pd.to_numeric(df["total_sales"], errors="coerce")
     df["support_rating"] = pd.to_numeric(df["support_rating"], errors="coerce")
 
+    # --- Step 7: Validate ranges, NULL out invalid values ---
     df.loc[~df["performance_rating"].between(1, 5), "performance_rating"] = None
     df.loc[~df["support_rating"].between(1, 5), "support_rating"] = None
     df.loc[df["age"] <= 0, "age"] = None
     df.loc[df["salary"] < 0, "salary"] = None
 
+    # --- Step 8: Normalize country casing ---
     df["country"] = df["country"].str.strip().str.title()
-    cur.execute("TRUNCATE TABLE support_metrics, sales_metrics, employees, departments RESTART IDENTITY CASCADE;")
+
+    # --- Populate staging.departments ---
+    cur.execute("TRUNCATE TABLE staging.support_metrics, staging.sales_metrics, staging.employees, staging.departments RESTART IDENTITY CASCADE;")
 
     for dept in df["department"].unique():
         cur.execute(
-            "INSERT INTO departments (department_name) VALUES (%s) ON CONFLICT (department_name) DO NOTHING;",
+            "INSERT INTO staging.departments (department_name) VALUES (%s) ON CONFLICT (department_name) DO NOTHING;",
             (dept,)
         )
 
-    cur.execute("SELECT department_id, department_name FROM departments;")
+    cur.execute("SELECT department_id, department_name FROM staging.departments;")
     dept_map = {name: did for did, name in cur.fetchall()}
 
+    # --- Populate staging.employees ---
     for _, row in df.iterrows():
         cur.execute("""
-            INSERT INTO employees (
+            INSERT INTO staging.employees (
                 employee_id, name, age, department_id, date_of_joining,
                 years_of_experience, country, salary, performance_rating
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -91,9 +102,10 @@ def main():
             int(row["performance_rating"]) if pd.notna(row["performance_rating"]) else None,
         ))
 
+    # --- Populate staging.sales_metrics (Sales only) ---
     for _, row in df[df["department"] == "Sales"].iterrows():
         cur.execute("""
-            INSERT INTO sales_metrics (employee_id, total_sales)
+            INSERT INTO staging.sales_metrics (employee_id, total_sales)
             VALUES (%s, %s)
             ON CONFLICT (employee_id) DO NOTHING;
         """, (
@@ -101,9 +113,10 @@ def main():
             float(row["total_sales"]) if pd.notna(row["total_sales"]) else None,
         ))
 
+    # --- Populate staging.support_metrics (Support only) ---
     for _, row in df[df["department"] == "Support"].iterrows():
         cur.execute("""
-            INSERT INTO support_metrics (employee_id, support_rating)
+            INSERT INTO staging.support_metrics (employee_id, support_rating)
             VALUES (%s, %s)
             ON CONFLICT (employee_id) DO NOTHING;
         """, (
@@ -114,7 +127,7 @@ def main():
     conn.commit()
     cur.close()
     conn.close()
-    print("Transformation complete. Staging tables populated.")
+    print("Transformation complete. staging tables populated.")
 
 if __name__ == "__main__":
     main()

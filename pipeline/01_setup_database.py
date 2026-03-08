@@ -16,10 +16,15 @@ def main():
     )
     cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS raw_data CASCADE;")
+    # Create sources schema
+    cur.execute("CREATE SCHEMA IF NOT EXISTS sources;")
 
+    # Drop and recreate raw_data in sources schema
+    cur.execute("DROP TABLE IF EXISTS sources.raw_data CASCADE;")
+
+    # All columns TEXT — no type enforcement at ingestion stage
     cur.execute("""
-        CREATE TABLE raw_data (
+        CREATE TABLE sources.raw_data (
             id SERIAL PRIMARY KEY,
             employee_id TEXT,
             name TEXT,
@@ -38,7 +43,7 @@ def main():
     conn.commit()
     cur.close()
     conn.close()
-    print("raw_data table created.")
+    print("sources.raw_data table created.")
 
 if __name__ == "__main__":
     main()

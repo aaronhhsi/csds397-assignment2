@@ -16,24 +16,30 @@ def main():
     )
     cur = conn.cursor()
 
-    cur.execute("DROP TABLE IF EXISTS support_metrics CASCADE;")
-    cur.execute("DROP TABLE IF EXISTS sales_metrics CASCADE;")
-    cur.execute("DROP TABLE IF EXISTS employees CASCADE;")
-    cur.execute("DROP TABLE IF EXISTS departments CASCADE;")
+    # Create staging schema
+    cur.execute("CREATE SCHEMA IF NOT EXISTS staging;")
 
+    # Drop staging tables in reverse dependency order
+    cur.execute("DROP TABLE IF EXISTS staging.support_metrics CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS staging.sales_metrics CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS staging.employees CASCADE;")
+    cur.execute("DROP TABLE IF EXISTS staging.departments CASCADE;")
+
+    # Departments lookup table
     cur.execute("""
-        CREATE TABLE departments (
+        CREATE TABLE staging.departments (
             department_id SERIAL PRIMARY KEY,
             department_name TEXT NOT NULL UNIQUE
         );
     """)
 
+    # Employees — core attributes, typed and constrained
     cur.execute("""
-        CREATE TABLE employees (
+        CREATE TABLE staging.employees (
             employee_id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             age INTEGER CHECK (age > 0 AND age < 100),
-            department_id INTEGER REFERENCES departments(department_id),
+            department_id INTEGER REFERENCES staging.departments(department_id),
             date_of_joining DATE,
             years_of_experience INTEGER CHECK (years_of_experience >= 0),
             country TEXT,
@@ -42,16 +48,18 @@ def main():
         );
     """)
 
+    # Sales metrics — Sales employees only
     cur.execute("""
-        CREATE TABLE sales_metrics (
-            employee_id INTEGER PRIMARY KEY REFERENCES employees(employee_id),
+        CREATE TABLE staging.sales_metrics (
+            employee_id INTEGER PRIMARY KEY REFERENCES staging.employees(employee_id),
             total_sales NUMERIC(12, 2) CHECK (total_sales >= 0)
         );
     """)
 
+    # Support metrics — Support employees only
     cur.execute("""
-        CREATE TABLE support_metrics (
-            employee_id INTEGER PRIMARY KEY REFERENCES employees(employee_id),
+        CREATE TABLE staging.support_metrics (
+            employee_id INTEGER PRIMARY KEY REFERENCES staging.employees(employee_id),
             support_rating INTEGER CHECK (support_rating BETWEEN 1 AND 5)
         );
     """)
@@ -59,7 +67,7 @@ def main():
     conn.commit()
     cur.close()
     conn.close()
-    print("Staging tables created: departments, employees, sales_metrics, support_metrics.")
+    print("Staging tables created: staging.departments, staging.employees, staging.sales_metrics, staging.support_metrics.")
 
 if __name__ == "__main__":
     main()

@@ -16,7 +16,7 @@ def main():
         port=DB_PORT
     )
 
-    df = pd.read_sql("SELECT * FROM raw_data;", conn)
+    df = pd.read_sql("SELECT * FROM sources.raw_data;", conn)
 
     print("=== Shape ===")
     print(df.shape)
