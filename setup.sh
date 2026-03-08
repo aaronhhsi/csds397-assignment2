@@ -10,8 +10,8 @@ echo "Starting PostgreSQL..."
 sudo service postgresql start
 
 echo "Configuring PostgreSQL user and database..."
-sudo -u postgres psql -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';"
-sudo -u postgres psql -c "CREATE DATABASE csds397 OWNER vscode;"
+sudo su postgres -s /bin/bash -c "psql -c \"ALTER USER postgres WITH PASSWORD 'postgres';\""
+sudo su postgres -s /bin/bash -c "psql -c \"CREATE DATABASE csds397 OWNER postgres;\""
 
 echo "Installing Python dependencies..."
 pip install -r requirements.txt
