@@ -13,7 +13,6 @@ DB_HOST = "localhost"
 DB_PORT = "5432"
 
 def main():
-    # Load everything as string — no type coercion at this stage
     df = pd.read_csv(RAW_FILE, dtype=str)
 
     conn = psycopg2.connect(

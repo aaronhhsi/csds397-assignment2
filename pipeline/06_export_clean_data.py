@@ -14,7 +14,6 @@ DB_PORT = "5432"
 def main():
     engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
 
-    # Export each staging table individually
     tables = {
         "departments": "SELECT * FROM staging.departments ORDER BY department_id;",
         "employees": "SELECT * FROM staging.employees ORDER BY employee_id;",
@@ -29,7 +28,6 @@ def main():
             df.to_csv(filepath, index=False)
             print(f"Exported {len(df)} rows to {filepath}")
 
-        # Also export a single joined view for convenience
         joined_query = """
             SELECT
                 e.employee_id,

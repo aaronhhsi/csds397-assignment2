@@ -16,16 +16,13 @@ def main():
     )
     cur = conn.cursor()
 
-    # Create staging schema
     cur.execute("CREATE SCHEMA IF NOT EXISTS staging;")
 
-    # Drop staging tables in reverse dependency order
     cur.execute("DROP TABLE IF EXISTS staging.support_metrics CASCADE;")
     cur.execute("DROP TABLE IF EXISTS staging.sales_metrics CASCADE;")
     cur.execute("DROP TABLE IF EXISTS staging.employees CASCADE;")
     cur.execute("DROP TABLE IF EXISTS staging.departments CASCADE;")
 
-    # Departments lookup table
     cur.execute("""
         CREATE TABLE staging.departments (
             department_id SERIAL PRIMARY KEY,
@@ -33,7 +30,6 @@ def main():
         );
     """)
 
-    # Employees — core attributes, typed and constrained
     cur.execute("""
         CREATE TABLE staging.employees (
             employee_id INTEGER PRIMARY KEY,
@@ -48,7 +44,6 @@ def main():
         );
     """)
 
-    # Sales metrics — Sales employees only
     cur.execute("""
         CREATE TABLE staging.sales_metrics (
             employee_id INTEGER PRIMARY KEY REFERENCES staging.employees(employee_id),
@@ -56,7 +51,6 @@ def main():
         );
     """)
 
-    # Support metrics — Support employees only
     cur.execute("""
         CREATE TABLE staging.support_metrics (
             employee_id INTEGER PRIMARY KEY REFERENCES staging.employees(employee_id),

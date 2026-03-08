@@ -16,13 +16,10 @@ def main():
     )
     cur = conn.cursor()
 
-    # Create sources schema
     cur.execute("CREATE SCHEMA IF NOT EXISTS sources;")
 
-    # Drop and recreate raw_data in sources schema
     cur.execute("DROP TABLE IF EXISTS sources.raw_data CASCADE;")
 
-    # All columns TEXT — no type enforcement at ingestion stage
     cur.execute("""
         CREATE TABLE sources.raw_data (
             id SERIAL PRIMARY KEY,
