@@ -10,8 +10,6 @@ DB_PORT = "5432"
 
 VALID_DEPARTMENTS = {"Sales", "Support", "Marketing"}
 
-INVALID_COUNTRIES = {"Kaldora", "Aqualis"}
-
 def normalize_date(date_str):
     """Parse dates in any format and return YYYY-MM-DD, or None if unparseable."""
     if pd.isna(date_str) or str(date_str).strip() == "":
